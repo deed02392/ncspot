@@ -20,6 +20,7 @@ use tokio::sync::mpsc;
 use url::Url;
 
 use std::env;
+use std::thread;
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, SystemTime};
@@ -309,6 +310,7 @@ impl Spotify {
 
     pub fn play(&self) {
         info!("play()");
+        self.set_volume(VOLUME_PERCENT * 100);
         self.send_worker(WorkerCommand::Play);
     }
 
@@ -330,6 +332,14 @@ impl Spotify {
 
     pub fn pause(&self) {
         info!("pause()");
+        let mut vol = self.volume();
+        let mut new_vol = vol.saturating_sub(VOLUME_PERCENT * 1);
+        while vol > 0 {
+            self.set_volume(new_vol);
+            vol = self.volume();
+            new_vol = vol.saturating_sub(VOLUME_PERCENT * 1);
+            thread::sleep(Duration::from_millis(1));
+        }
         self.send_worker(WorkerCommand::Pause);
     }
 
